@@ -1,7 +1,8 @@
-export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
+/**
+ * AI Service type definitions
+ */
+
+import type { ChatMessage } from './chat.types';
 
 export interface AIService {
   name: string;

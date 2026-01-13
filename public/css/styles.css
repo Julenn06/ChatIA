@@ -145,12 +145,6 @@ body {
     border-color: var(--primary);
 }
 
-.btn-icon.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-}
-
 .tooltip {
     position: absolute;
     bottom: -30px;
@@ -616,19 +610,13 @@ body {
     min-height: 50px;
 }
 
-#sendButton:hover:not(:disabled) {
+#sendButton:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
 }
 
-#sendButton:active:not(:disabled) {
+#sendButton:active {
     transform: translateY(0);
-}
-
-#sendButton:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
 }
 
 #sendButton.stop {

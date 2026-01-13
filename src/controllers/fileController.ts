@@ -1,8 +1,13 @@
-import type { ChatMessage } from '../types';
-import { config } from '../config';
+import { LIMITS } from '../constants';
 
-const MAX_FILE_SIZE = config.maxFileSize;
-const MAX_CONTENT_LENGTH = config.maxContentLength;
+const MAX_FILE_SIZE = LIMITS.MAX_FILE_SIZE;
+const MAX_CONTENT_LENGTH = LIMITS.MAX_CONTENT_LENGTH;
+
+// Regex pre-compilada para validación de extensiones de texto
+const TEXT_FILE_EXTENSIONS = /\.(txt|md|js|ts|json|csv|py|html|css)$/i;
+
+// Headers reutilizables
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 export async function handleFileUpload(req: Request): Promise<Response> {
   try {
@@ -12,7 +17,7 @@ export async function handleFileUpload(req: Request): Promise<Response> {
     if (!file) {
       return new Response(JSON.stringify({ error: 'No file provided' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: JSON_HEADERS
       });
     }
 
@@ -23,7 +28,7 @@ export async function handleFileUpload(req: Request): Promise<Response> {
         details: 'Maximum file size is 5MB'
       }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: JSON_HEADERS
       });
     }
 
@@ -48,23 +53,14 @@ export async function handleFileUpload(req: Request): Promise<Response> {
         base64: dataUrl,
         isImage: true
       }), {
-        headers: { 'Content-Type': 'application/json' }
+        headers: JSON_HEADERS
       });
     } else if (fileType === 'application/pdf') {
       // Para PDFs, intentar extraer texto básico y limitarlo
       const text = await file.text();
       const truncated = text.substring(0, MAX_CONTENT_LENGTH);
       content = `[PDF adjunto: ${fileName}]\n${truncated}${text.length > MAX_CONTENT_LENGTH ? '\n\n... (contenido truncado)' : ''}`;
-    } else if (fileType.startsWith('text/') || 
-               fileName.endsWith('.txt') || 
-               fileName.endsWith('.md') ||
-               fileName.endsWith('.js') ||
-               fileName.endsWith('.ts') ||
-               fileName.endsWith('.json') ||
-               fileName.endsWith('.csv') ||
-               fileName.endsWith('.py') ||
-               fileName.endsWith('.html') ||
-               fileName.endsWith('.css')) {
+    } else if (fileType.startsWith('text/') || TEXT_FILE_EXTENSIONS.test(fileName)) {
       // Para archivos de texto, limitar tamaño
       const text = await file.text();
       const truncated = text.substring(0, MAX_CONTENT_LENGTH);
@@ -80,7 +76,7 @@ export async function handleFileUpload(req: Request): Promise<Response> {
       fileType,
       size: file.size
     }), {
-      headers: { 'Content-Type': 'application/json' }
+      headers: JSON_HEADERS
     });
 
   } catch (error) {
@@ -90,7 +86,7 @@ export async function handleFileUpload(req: Request): Promise<Response> {
       details: error instanceof Error ? error.message : 'Unknown error'
     }), { 
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: JSON_HEADERS
     });
   }
 }

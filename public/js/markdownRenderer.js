@@ -1,12 +1,6 @@
-/**
- * MarkdownRenderer - Renderizado de Markdown a HTML (Optimizado)
- */
 export class MarkdownRenderer {
-    // Caché para renderizados previos
     static cache = new Map();
     static maxCacheSize = 100;
-
-    // Regex pre-compiladas para mejor rendimiento
     static patterns = {
         hr1: /^---+$/gm,
         hr2: /^\*\*\*+$/gm,
@@ -27,64 +21,39 @@ export class MarkdownRenderer {
     };
 
     static render(text) {
-        // Verificar caché
         if (this.cache.has(text)) {
-            return this.cache.get(text);
+            const cached = this.cache.get(text);
+            this.cache.delete(text);
+            this.cache.set(text, cached);
+            return cached;
         }
 
         let html = text;
-
-        // Usar regex pre-compiladas para mejor rendimiento
-        // Líneas horizontales (--- o ***)
         html = html.replace(this.patterns.hr1, '<hr>');
         html = html.replace(this.patterns.hr2, '<hr>');
-
-        // Bloques de código (```code```) - preservar antes de procesar enlaces
         const codeBlocks = [];
         html = html.replace(this.patterns.codeBlock, (match, lang, code) => {
             const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
             codeBlocks.push(`<pre><code>${code}</code></pre>`);
             return placeholder;
         });
-
-        // Enlaces markdown [text](url)
         html = html.replace(this.patterns.linkMd, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-
-        // URLs automáticas (detectar http://, https://, www.)
         html = html.replace(this.patterns.urlHttps, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
         html = html.replace(this.patterns.urlWww, '$1<a href="http://$2" target="_blank" rel="noopener noreferrer">$2</a>');
-        
-        // Headers (debe ir antes que negritas)
         html = html.replace(this.patterns.h3, '<h3>$1</h3>');
         html = html.replace(this.patterns.h2, '<h2>$1</h2>');
         html = html.replace(this.patterns.h1, '<h1>$1</h1>');
-
-        // Tablas
         html = this.renderTables(html);
-
-        // Negritas (**text** o __text__)
         html = html.replace(this.patterns.bold1, '<strong>$1</strong>');
         html = html.replace(this.patterns.bold2, '<strong>$1</strong>');
-
-        // Cursiva (*text* o _text_) - debe ir después de negritas
         html = html.replace(this.patterns.italic1, '<em>$1</em>');
         html = html.replace(this.patterns.italic2, '<em>$1</em>');
-
-        // Código inline (`code`)
         html = html.replace(this.patterns.code, '<code>$1</code>');
-
-        // Listas
         html = this.renderLists(html);
-
-        // Párrafos
         html = this.renderParagraphs(html);
-
-        // Restaurar bloques de código
         codeBlocks.forEach((code, index) => {
             html = html.replace(`__CODE_BLOCK_${index}__`, code);
         });
-
-        // Guardar en caché (con límite de tamaño)
         if (this.cache.size >= this.maxCacheSize) {
             const firstKey = this.cache.keys().next().value;
             this.cache.delete(firstKey);
@@ -94,46 +63,34 @@ export class MarkdownRenderer {
         return html;
     }
 
-    /**
-     * Limpiar caché manualmente si es necesario
-     */
-    static clearCache() {
-        this.cache.clear();
-    }
-
     static renderTables(html) {
         const tableRegex = /(\|.+\|\n)+/g;
         return html.replace(tableRegex, (match) => {
             const lines = match.trim().split('\n');
             if (lines.length < 2) return match;
             
-            let tableHtml = '<table>';
-            
-            // Primera fila como headers
+            const parts = ['<table>'];
             const headers = lines[0].split('|').filter(cell => cell.trim());
-            tableHtml += '<thead><tr>';
-            headers.forEach(header => {
-                tableHtml += `<th>${header.trim()}</th>`;
-            });
-            tableHtml += '</tr></thead>';
-            
-            // Resto de filas (saltando la línea separadora |---|)
-            tableHtml += '<tbody>';
+            parts.push('<thead><tr>');
+            for (const header of headers) {
+                parts.push(`<th>${header.trim()}</th>`);
+            }
+            parts.push('</tr></thead><tbody>');
             for (let i = 1; i < lines.length; i++) {
                 if (lines[i].includes('---')) continue;
                 
                 const cells = lines[i].split('|').filter(cell => cell.trim());
                 if (cells.length === 0) continue;
                 
-                tableHtml += '<tr>';
-                cells.forEach(cell => {
-                    tableHtml += `<td>${cell.trim()}</td>`;
-                });
-                tableHtml += '</tr>';
+                parts.push('<tr>');
+                for (const cell of cells) {
+                    parts.push(`<td>${cell.trim()}</td>`);
+                }
+                parts.push('</tr>');
             }
-            tableHtml += '</tbody></table>';
+            parts.push('</tbody></table>');
             
-            return tableHtml;
+            return parts.join('');
         });
     }
 
@@ -143,8 +100,7 @@ export class MarkdownRenderer {
         let inList = false;
         let listType = null;
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
+        for (const line of lines) {
             const bulletMatch = line.match(this.patterns.bullet);
             const numberMatch = line.match(this.patterns.number);
 
@@ -186,9 +142,7 @@ export class MarkdownRenderer {
         return blocks.map(block => {
             block = block.trim();
             if (!block) return '';
-            // No envolver si ya es HTML
             if (block.startsWith('<')) return block;
-            // Convertir saltos simples en <br>
             return '<p>' + block.replace(/\n/g, '<br>') + '</p>';
         }).join('\n');
     }

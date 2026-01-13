@@ -1,6 +1,3 @@
-/**
- * FileHandler - Manejo de archivos adjuntos
- */
 export class FileHandler {
     constructor() {
         this.attachedFile = null;
@@ -20,29 +17,25 @@ export class FileHandler {
     }
     
     initializeEventListeners() {
-        // Drag and Drop
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        const dragEvents = ['dragenter', 'dragover', 'dragleave', 'drop'];
+        const dragActiveEvents = ['dragenter', 'dragover'];
+        const dragInactiveEvents = ['dragleave', 'drop'];
+        for (const eventName of dragEvents) {
             this.messagesContainer.addEventListener(eventName, this.preventDefaults, false);
-        });
-        
-        ['dragenter', 'dragover'].forEach(eventName => {
+        }
+        for (const eventName of dragActiveEvents) {
             this.messagesContainer.addEventListener(eventName, () => {
                 this.dropZone.classList.add('active');
             });
-        });
-        
-        ['dragleave', 'drop'].forEach(eventName => {
+        }
+        for (const eventName of dragInactiveEvents) {
             this.messagesContainer.addEventListener(eventName, () => {
                 this.dropZone.classList.remove('active');
             });
-        });
-        
+        }
         this.messagesContainer.addEventListener('drop', async (e) => {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            
-            if (files.length > 0) {
-                await this.handleFileSelect({ target: { files: [files[0]] } });
+            if (e.dataTransfer.files.length > 0) {
+                await this.handleFileSelect({ target: { files: [e.dataTransfer.files[0]] } });
             }
         });
     }
@@ -58,13 +51,9 @@ export class FileHandler {
         
         this.attachedFile = file;
         this.fileType = file.type;
-        
-        // Mostrar información del archivo
         this.fileName.textContent = file.name;
         this.fileSize.textContent = this.formatFileSize(file.size);
         this.fileAttachment.classList.add('active');
-        
-        // Preview de imagen
         if (file.type.startsWith('image/')) {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -79,8 +68,6 @@ export class FileHandler {
         } else {
             this.filePreview.innerHTML = '<span class="file-icon">📎</span>';
         }
-        
-        // Procesar el archivo
         try {
             const formData = new FormData();
             formData.append('file', file);

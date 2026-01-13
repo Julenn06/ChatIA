@@ -15,22 +15,32 @@ Plataforma de chat profesional con múltiples servicios de IA (Groq, Cerebras, G
 ## 📁 Estructura del Proyecto
 
 ```
-ChatIA/
+bun-ai-api-main/
+├── docs/                     # 📚 Documentación técnica
+│   ├── ARCHITECTURE.md       # Arquitectura detallada
+│   ├── QUICKSTART.md         # Guía de inicio rápido
+│   ├── SUMMARY.md            # Resumen de cambios
+│   └── PROJECT-STRUCTURE.md  # Guía visual de estructura
 ├── src/
 │   ├── index.ts              # Punto de entrada del servidor
-│   ├── types.ts              # Definiciones de tipos TypeScript
 │   ├── config/
 │   │   └── index.ts          # Configuración centralizada
+│   ├── constants/            # Constantes del sistema
+│   │   ├── file-types.ts     # Tipos de archivo permitidos
+│   │   └── limits.ts         # Límites del sistema
 │   ├── controllers/
 │   │   ├── chatController.ts # Lógica de chat
 │   │   └── fileController.ts # Manejo de archivos
+│   ├── middlewares/          # Middlewares (preparado para futuro)
 │   ├── routes/
 │   │   └── index.ts          # Definición de rutas
 │   ├── services/
 │   │   ├── groq.ts           # Servicio Groq
 │   │   ├── cerebras.ts       # Servicio Cerebras
-│   │   ├── gemini.ts         # Servicio Google Gemini
-│   │   └── ollama.ts         # Servicio Ollama (opcional)
+│   │   └── gemini.ts         # Servicio Google Gemini
+│   ├── types/                # Tipos TypeScript organizados
+│   │   ├── chat.types.ts     # Tipos de chat
+│   │   └── service.types.ts  # Tipos de servicios
 │   └── utils/
 │       └── serviceManager.ts # Gestión de servicios IA
 ├── public/
@@ -41,11 +51,16 @@ ChatIA/
 │       ├── main.js           # Punto de entrada JS
 │       ├── chatManager.js    # Gestión del chat
 │       ├── fileHandler.js    # Manejo de archivos
-│       └── markdownRenderer.js # Renderizado markdown
+│       ├── markdownRenderer.js # Renderizado markdown
+│       └── performanceUtils.js # Utilidades de rendimiento
+├── tests/                    # Tests (preparado)
+├── CONTRIBUTING.md           # Guía para contribuidores
 ├── package.json
 ├── tsconfig.json
 └── README.md
 ```
+
+📖 **Ver estructura completa**: [docs/PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md)
 
 ## 🛠️ Instalación
 
@@ -146,6 +161,7 @@ ChatIA/
 - **Controladores**: Separación de lógica en controladores específicos
 - **Servicios IA**: Abstracción mediante interfaces comunes
 - **Failover**: Rotación automática entre servicios disponibles
+- **Organización**: Tipos, constantes y configuración centralizados
 
 ### Frontend (Vanilla JS + Módulos ES6)
 

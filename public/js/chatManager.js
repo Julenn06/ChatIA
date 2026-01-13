@@ -1,7 +1,8 @@
 /**
- * ChatManager - Gestión principal del chat
+ * ChatManager - Gestión principal del chat (Optimizado)
  */
 import { MarkdownRenderer } from './markdownRenderer.js';
+import { PerformanceUtils } from './performanceUtils.js';
 
 export class ChatManager {
     constructor(fileHandler) {
@@ -19,15 +20,21 @@ export class ChatManager {
         this.sendButtonIcon = document.getElementById('sendButtonIcon');
         this.typingIndicator = document.getElementById('typingIndicator');
         
+        // Optimizaciones de rendimiento
+        this.renderThrottle = 100; // ms entre renderizados
+        this.lastRenderTime = 0;
+        
         this.initializeEventListeners();
     }
     
     initializeEventListeners() {
-        // Auto-resize textarea
-        this.messageInput.addEventListener('input', () => {
+        // Auto-resize textarea (optimizado con throttle)
+        const resizeTextarea = PerformanceUtils.throttle(() => {
             this.messageInput.style.height = 'auto';
             this.messageInput.style.height = Math.min(this.messageInput.scrollHeight, 150) + 'px';
-        });
+        }, 50);
+        
+        this.messageInput.addEventListener('input', resizeTextarea);
         
         // Enviar con Enter (Shift+Enter para nueva línea)
         this.messageInput.addEventListener('keydown', (e) => {
@@ -40,13 +47,15 @@ export class ChatManager {
         // Click en botón
         this.sendButton.addEventListener('click', () => this.handleSendOrStop());
         
-        // Detectar scroll manual del usuario
-        this.messagesContainer.addEventListener('scroll', () => {
+        // Detectar scroll manual del usuario (optimizado con debounce)
+        const handleScroll = PerformanceUtils.debounce(() => {
             const isNearBottom = this.messagesContainer.scrollHeight - 
                                  this.messagesContainer.scrollTop - 
                                  this.messagesContainer.clientHeight < 100;
             this.autoScroll = isNearBottom;
-        });
+        }, 100);
+        
+        this.messagesContainer.addEventListener('scroll', handleScroll, { passive: true });
     }
     
     async handleSendOrStop() {
@@ -180,6 +189,7 @@ export class ChatManager {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let assistantMessage = '';
+        let pendingUpdate = false;
         
         // Crear el mensaje del asistente
         const messageDiv = document.createElement('div');
@@ -215,6 +225,21 @@ export class ChatManager {
         messageDiv.appendChild(wrapper);
         this.messagesContainer.appendChild(messageDiv);
         
+        // Función optimizada para actualizar el contenido
+        const updateContent = () => {
+            if (!pendingUpdate) {
+                pendingUpdate = true;
+                requestAnimationFrame(() => {
+                    contentDiv.innerHTML = MarkdownRenderer.render(assistantMessage);
+                    this.scrollToBottom();
+                    pendingUpdate = false;
+                });
+            }
+        };
+        
+        // Throttle para limitar frecuencia de renderizado
+        const throttledUpdate = PerformanceUtils.throttle(updateContent, this.renderThrottle);
+        
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -231,9 +256,8 @@ export class ChatManager {
                         const parsed = JSON.parse(data);
                         if (parsed.content) {
                             assistantMessage += parsed.content;
-                            // Renderizar markdown en tiempo real
-                            contentDiv.innerHTML = MarkdownRenderer.render(assistantMessage);
-                            this.scrollToBottom();
+                            // Usar throttle para limitar renderizados
+                            throttledUpdate();
                         }
                     } catch (e) {
                         // Ignorar errores de parsing
@@ -241,6 +265,9 @@ export class ChatManager {
                 }
             }
         }
+        
+        // Renderizado final (asegurar que se muestre todo)
+        updateContent();
         
         // Agregar botones de acción al final
         const actions = this.createMessageActions(assistantMessage);

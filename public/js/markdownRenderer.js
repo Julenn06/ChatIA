@@ -1,47 +1,77 @@
 /**
- * MarkdownRenderer - Renderizado de Markdown a HTML
+ * MarkdownRenderer - Renderizado de Markdown a HTML (Optimizado)
  */
 export class MarkdownRenderer {
+    // Caché para renderizados previos
+    static cache = new Map();
+    static maxCacheSize = 100;
+
+    // Regex pre-compiladas para mejor rendimiento
+    static patterns = {
+        hr1: /^---+$/gm,
+        hr2: /^\*\*\*+$/gm,
+        codeBlock: /```(\w+)?\n([\s\S]*?)```/g,
+        linkMd: /\[([^\]]+)\]\(([^)]+)\)/g,
+        urlHttps: /(^|\s)(https?:\/\/[^\s<]+)/g,
+        urlWww: /(^|\s)(www\.[^\s<]+)/g,
+        h3: /^### (.+)$/gm,
+        h2: /^## (.+)$/gm,
+        h1: /^# (.+)$/gm,
+        bold1: /\*\*(.+?)\*\*/g,
+        bold2: /__(.+?)__/g,
+        italic1: /\*(.+?)\*/g,
+        italic2: /_(.+?)_/g,
+        code: /`([^`]+)`/g,
+        bullet: /^[\-\*\+] (.+)$/,
+        number: /^\d+\. (.+)$/
+    };
+
     static render(text) {
+        // Verificar caché
+        if (this.cache.has(text)) {
+            return this.cache.get(text);
+        }
+
         let html = text;
 
+        // Usar regex pre-compiladas para mejor rendimiento
         // Líneas horizontales (--- o ***)
-        html = html.replace(/^---+$/gm, '<hr>');
-        html = html.replace(/^\*\*\*+$/gm, '<hr>');
+        html = html.replace(this.patterns.hr1, '<hr>');
+        html = html.replace(this.patterns.hr2, '<hr>');
 
         // Bloques de código (```code```) - preservar antes de procesar enlaces
         const codeBlocks = [];
-        html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+        html = html.replace(this.patterns.codeBlock, (match, lang, code) => {
             const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
             codeBlocks.push(`<pre><code>${code}</code></pre>`);
             return placeholder;
         });
 
         // Enlaces markdown [text](url)
-        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+        html = html.replace(this.patterns.linkMd, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
 
         // URLs automáticas (detectar http://, https://, www.)
-        html = html.replace(/(^|\s)(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
-        html = html.replace(/(^|\s)(www\.[^\s<]+)/g, '$1<a href="http://$2" target="_blank" rel="noopener noreferrer">$2</a>');
+        html = html.replace(this.patterns.urlHttps, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
+        html = html.replace(this.patterns.urlWww, '$1<a href="http://$2" target="_blank" rel="noopener noreferrer">$2</a>');
         
         // Headers (debe ir antes que negritas)
-        html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-        html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-        html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+        html = html.replace(this.patterns.h3, '<h3>$1</h3>');
+        html = html.replace(this.patterns.h2, '<h2>$1</h2>');
+        html = html.replace(this.patterns.h1, '<h1>$1</h1>');
 
         // Tablas
         html = this.renderTables(html);
 
         // Negritas (**text** o __text__)
-        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        html = html.replace(/__(.+?)__/g, '<strong>$1</strong>');
+        html = html.replace(this.patterns.bold1, '<strong>$1</strong>');
+        html = html.replace(this.patterns.bold2, '<strong>$1</strong>');
 
         // Cursiva (*text* o _text_) - debe ir después de negritas
-        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-        html = html.replace(/_(.+?)_/g, '<em>$1</em>');
+        html = html.replace(this.patterns.italic1, '<em>$1</em>');
+        html = html.replace(this.patterns.italic2, '<em>$1</em>');
 
         // Código inline (`code`)
-        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+        html = html.replace(this.patterns.code, '<code>$1</code>');
 
         // Listas
         html = this.renderLists(html);
@@ -54,7 +84,21 @@ export class MarkdownRenderer {
             html = html.replace(`__CODE_BLOCK_${index}__`, code);
         });
 
+        // Guardar en caché (con límite de tamaño)
+        if (this.cache.size >= this.maxCacheSize) {
+            const firstKey = this.cache.keys().next().value;
+            this.cache.delete(firstKey);
+        }
+        this.cache.set(text, html);
+
         return html;
+    }
+
+    /**
+     * Limpiar caché manualmente si es necesario
+     */
+    static clearCache() {
+        this.cache.clear();
     }
 
     static renderTables(html) {
@@ -101,8 +145,8 @@ export class MarkdownRenderer {
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            const bulletMatch = line.match(/^[\-\*\+] (.+)$/);
-            const numberMatch = line.match(/^\d+\. (.+)$/);
+            const bulletMatch = line.match(this.patterns.bullet);
+            const numberMatch = line.match(this.patterns.number);
 
             if (bulletMatch) {
                 if (!inList || listType !== 'ul') {

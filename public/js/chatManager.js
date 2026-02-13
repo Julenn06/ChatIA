@@ -248,20 +248,10 @@ export class ChatManager {
     
     clearChat() {
         this.conversationHistory = [];
-        this.messagesContainer.innerHTML = `
-            <div class="message assistant">
-                <div class="message-avatar">AI</div>
-                <div class="message-content-wrapper">
-                    <div class="message-header">
-                        <span class="message-sender">AI Assistant</span>
-                        <span class="message-time">${this.getCurrentTime()}</span>
-                    </div>
-                    <div class="message-content">
-                        ¡Bienvenido! Soy tu asistente de IA profesional. Utilizo múltiples servicios de última generación (Groq y Cerebras) para ofrecerte las mejores respuestas. ¿En qué puedo ayudarte hoy?
-                    </div>
-                </div>
-            </div>
-        `;
+        const { messageDiv } = this.createMessageElement('assistant', 'AI Assistant');
+        messageDiv.querySelector('.message-content').innerHTML = '¡Bienvenido! Soy tu asistente de IA profesional. Utilizo múltiples servicios de última generación (Groq y Cerebras) para ofrecerte las mejores respuestas. ¿En qué puedo ayudarte hoy?';
+        this.messagesContainer.innerHTML = '';
+        this.messagesContainer.appendChild(messageDiv);
     }
     
     scrollToBottom() {
